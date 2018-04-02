@@ -232,7 +232,7 @@ COINS = [
          coin_shortcut='ZEN',
          coin_label='Zencash',
          address_type=8329,
-         address_type_p2sh=5,
+         address_type_p2sh=8342,
          maxfee_kb=2000000,
          minfee_kb=1000,
          signed_message_header='Zencash Signed Message:\n',
@@ -251,7 +251,7 @@ COINS = [
          address_prefix='zencash:',
          min_address_length=35,
          max_address_length=95,
-         bitcore=['https://explorer.zensystem.io', 'https://explorer.zen-solutions.io'],
+         bitcore=['https://explorer.zensystem.io/'],
     ),
 ]
 
