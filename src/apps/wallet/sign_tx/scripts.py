@@ -20,24 +20,34 @@ def input_script_p2pkh_or_p2sh(pubkey: bytes, signature: bytes, sighash: int) ->
 
 
 def output_script_p2pkh(pubkeyhash: bytes) -> bytearray:
-    s = bytearray(25)
-    s[0] = 0x76  # OP_DUP
-    s[1] = 0xA9  # OP_HASH_160
-    s[2] = 0x14  # pushing 20 bytes
-    s[3:23] = pubkeyhash
-    s[23] = 0x88  # OP_EQUALVERIFY
-    s[24] = 0xAC  # OP_CHECKSIG
+    s = bytearray(64) 
+    s[0] = 0x76 # OP_DUP 
+    s[1] = 0xA9 # OP_HASH_160 
+    s[2] = 0x14 # pushing 20 bytes 
+    s[3:23] = pubkeyhash 
+    s[23] = 0x88 # OP_EQUALVERIFY 
+    s[24] = 0xAC # OP_CHECKSIG 
+    s[25] = 0x20 
+    s[26:58] = b'\x54\x52\xf0\x3c\x7a\xf4\x6d\xf1\x58\xf6\xa6\xfe\x2f\xe9\x49\x49\x66\xed\xc7\x43\x40\x27\xaf\x26\x51\xa3\x88\x0e\x00\x00\x00\x00' 
+    #b'\x00\x00\x00\x00\x00\x00\x01\xb3\xd7(\xd9?\xe2(\xd4\xf8\xe1\x82a\xfb\xa2D$\x8bW\x82\xecq^\xac\xc6\x95' 
+    s[58] = 0x04 
+    s[59:62] = b'\x4E\x59\x04'
+    s[63] = 0xB4 
     return s
 
 
 def output_script_p2sh(scripthash: bytes) -> bytearray:
     # A9 14 <scripthash> 87
-
-    s = bytearray(23)
-    s[0] = 0xA9  # OP_HASH_160
-    s[1] = 0x14  # pushing 20 bytes
-    s[2:22] = scripthash
-    s[22] = 0x87  # OP_EQUAL
+    s = bytearray(62) 
+    s[0] = 0xA9 # OP_HASH_160 
+    s[1] = 0x14 # pushing 20 bytes 
+    s[2:22] = scripthash 
+    s[22] = 0x87 # OP_EQUAL 
+    s[23] = 0x20 
+    s[24:56] = b'\x54\x52\xf0\x3c\x7a\xf4\x6d\xf1\x58\xf6\xa6\xfe\x2f\xe9\x49\x49\x66\xed\xc7\x43\x40\x27\xaf\x26\x51\xa3\x88\x0e\x00\x00\x00\x00' 
+    s[56] = 0x04 
+    s[57:61]=b'\x4E\x59\x04\x00'
+    s[61] = 0xB4
     return s
 
 
