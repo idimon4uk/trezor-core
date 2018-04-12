@@ -442,7 +442,7 @@ def get_tx_header(tx: SignTx, segwit: bool = False):
 
 
 def output_derive_script(o: TxOutputType, coin: CoinType, root: bip32.HDNode) -> bytes:
-
+    print("output derive script")
     if o.script_type == OutputScriptType.PAYTOOPRETURN:
         # op_return output
         if o.amount != 0:
@@ -512,10 +512,14 @@ def output_is_change(o: TxOutputType, wallet_path: list, segwit_in: int) -> bool
 
 
 def input_derive_script(coin: CoinType, i: TxInputType, pubkey: bytes, signature: bytes=None) -> bytes:
+    if coin.coin_name == 'Zencash':
+        print(i.prev_input_script)
     if i.script_type == InputScriptType.SPENDADDRESS:
         # p2pkh or p2sh
-        return input_script_p2pkh_or_p2sh(
-            pubkey, signature, get_hash_type(coin))
+        if coin == 'Zencash':
+            return input_script_p2pkh_or_p2sh_zen(
+                pubkey, signature, get_hash_type(coin), i.prev_input_script)
+    
 
     if i.script_type == InputScriptType.SPENDP2SHWITNESS:
         # p2wpkh or p2wsh using p2sh
@@ -573,8 +577,13 @@ def node_derive(root: bip32.HDNode, address_n: list):
 
 
 def ecdsa_sign(node: bip32.HDNode, digest: bytes) -> bytes:
+    print("<------------------------------------")
+    digest=b'\x36\x5e\xa9\x3b\xcd\x62\x49\x56\x9d\x91\xa2\xa7\x59\x3e\x91\xe1\x4d\x11\x89\xed\x41\x54\xed\x87\xc3\xff\xa2\x38\x4f\x68\x52\x33'
+    # digest=b'\xdf\x42\x3c\x29\x98\xf7\xd9\x6a\x85\x3f\x47\x3c\x67\x1c\x00\x93\xe1\x9b\x50\x64\x43\x6c\x99\x47\xba\x2c\x96\x69\x20\x79\xa7\x0f'
     sig = secp256k1.sign(node.private_key(), digest)
+    print(digest)
     sigder = der.encode_seq((sig[1:33], sig[33:65]))
+    print(digest)
     return sigder
 
 

@@ -15,6 +15,7 @@ class TxInputType(p.MessageType):
         8: ('amount', p.UVarintType, 0),
         9: ('decred_tree', p.UVarintType, 0),
         10: ('decred_script_version', p.UVarintType, 0),
+        11: ('prev_input_script', p.UnicodeType, 0),
     }
 
     def __init__(
@@ -29,6 +30,7 @@ class TxInputType(p.MessageType):
         amount: int = None,
         decred_tree: int = None,
         decred_script_version: int = None,
+        prev_input_script: str = None,
         **kwargs,
     ):
         self.address_n = [] if address_n is None else address_n
@@ -41,4 +43,5 @@ class TxInputType(p.MessageType):
         self.amount = amount
         self.decred_tree = decred_tree
         self.decred_script_version = decred_script_version
+        self.prev_input_script = prev_input_script
         p.MessageType.__init__(self, **kwargs)
