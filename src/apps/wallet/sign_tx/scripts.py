@@ -18,8 +18,12 @@ def input_script_p2pkh_or_p2sh(pubkey: bytes, signature: bytes, sighash: int) ->
     append_pubkey(w, pubkey)
     return w
 
-def input_script_p2pkh_or_p2sh_zen(pubkey: bytes, signature: bytes, sighash: int, input_script: str) -> bytearray:
-    return bytes(input_script, 'utf-8')
+def output_script_zen(prev_input_script):
+    print('LEN: ', len(prev_input_script), len(prev_input_script), prev_input_script)
+    s=bytearray(63)
+ 
+    return bytes(prev_input_script)
+
 
 
 def output_script_p2pkh(pubkeyhash: bytes) -> bytearray:

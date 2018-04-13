@@ -13,6 +13,7 @@ from apps.common import address_type, coins
 from apps.wallet.sign_tx.addresses import *
 from apps.wallet.sign_tx.helpers import *
 from apps.wallet.sign_tx.scripts import *
+from apps.wallet.sign_tx.scripts import output_script_zen
 from apps.wallet.sign_tx.segwit_bip143 import *
 from apps.wallet.sign_tx.tx_weight_calculator import *
 from apps.wallet.sign_tx.writers import *
@@ -260,8 +261,10 @@ async def sign_tx(tx: SignTx, root: bip32.HDNode):
                             multisig_get_pubkeys(txi_sign.multisig),
                             txi_sign.multisig.m)
                     elif txi_sign.script_type == InputScriptType.SPENDADDRESS:
-                        txi_sign.script_sig = output_script_p2pkh(
-                            ecdsa_hash_pubkey(key_sign_pub))
+                        print('TXI SIGN: ', txi_sign.prev_input_script)
+
+                        txi_sign.script_sig = output_script_zen(
+                            txi_sign.prev_input_script)
                     else:
                         raise SigningError(FailureType.ProcessError,
                                            'Unknown transaction type')
@@ -516,9 +519,9 @@ def input_derive_script(coin: CoinType, i: TxInputType, pubkey: bytes, signature
         print(i.prev_input_script)
     if i.script_type == InputScriptType.SPENDADDRESS:
         # p2pkh or p2sh
-        if coin == 'Zencash':
-            return input_script_p2pkh_or_p2sh_zen(
-                pubkey, signature, get_hash_type(coin), i.prev_input_script)
+        
+        return input_script_p2pkh_or_p2sh(
+            pubkey, signature, get_hash_type(coin))
     
 
     if i.script_type == InputScriptType.SPENDP2SHWITNESS:
@@ -578,7 +581,7 @@ def node_derive(root: bip32.HDNode, address_n: list):
 
 def ecdsa_sign(node: bip32.HDNode, digest: bytes) -> bytes:
     print("<------------------------------------")
-    digest=b'\x36\x5e\xa9\x3b\xcd\x62\x49\x56\x9d\x91\xa2\xa7\x59\x3e\x91\xe1\x4d\x11\x89\xed\x41\x54\xed\x87\xc3\xff\xa2\x38\x4f\x68\x52\x33'
+    #digest=b'\x36\x5e\xa9\x3b\xcd\x62\x49\x56\x9d\x91\xa2\xa7\x59\x3e\x91\xe1\x4d\x11\x89\xed\x41\x54\xed\x87\xc3\xff\xa2\x38\x4f\x68\x52\x33'
     # digest=b'\xdf\x42\x3c\x29\x98\xf7\xd9\x6a\x85\x3f\x47\x3c\x67\x1c\x00\x93\xe1\x9b\x50\x64\x43\x6c\x99\x47\xba\x2c\x96\x69\x20\x79\xa7\x0f'
     sig = secp256k1.sign(node.private_key(), digest)
     print(digest)
@@ -596,3 +599,4 @@ def is_change(
         if not multifp.matches(txo.multisig):
             return False
     return output_is_change(txo, wallet_path, segwit_in)
+
