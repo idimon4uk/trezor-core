@@ -19,51 +19,62 @@ def input_script_p2pkh_or_p2sh(pubkey: bytes, signature: bytes, sighash: int) ->
     return w
 
 def output_script_zen(prev_input_script):
-    print('LEN: ', len(prev_input_script), len(prev_input_script), prev_input_script)
+    # print('LEN: ', len(prev_input_script), len(prev_input_script), prev_input_script)
     s=bytearray(63)
- 
     return bytes(prev_input_script)
 
 
 
 def output_script_p2pkh(pubkeyhash: bytes) -> bytearray:
-    print("p2pkh")
-
-    s = bytearray(63) 
+    s = bytearray(25) 
     s[0] = 0x76 # OP_DUP 
     s[1] = 0xA9 # OP_HASH_160 
     s[2] = 0x14 # pushing 20 bytes 
     s[3:23] = pubkeyhash 
     s[23] = 0x88 # OP_EQUALVERIFY 
     s[24] = 0xAC # OP_CHECKSIG 
-    s[25] = 0x20
-    # s[26:58] = b'\x54\x52\xf0\x3c\x7a\xf4\x6d\xf1\x58\xf6\xa6\xfe\x2f\xe9\x49\x49\x66\xed\xc7\x43\x40\x27\xaf\x26\x51\xa3\x88\x0e\x00\x00\x00\x00' 
-    s[26:58] = b'\x52\xfd\xf5\xcd\x25\x62\xe3\xf2\xef\x20\x31\x7a\x9a\xab\xf6\x15\x51\xb1\xaa\xa9\x5b\xa8\x9c\x67\x4f\x57\x7e\x45\x00\x00\x00\x00'
-    # x03\xc0\x1f\x02\x00\xb4'
-    s[58] = 0x03
-    s[59:62] = b'\x39\x69\x04'
-    s[62] = 0xB4
-    # s[26:58] = b'\xd5\xc7\x39\x68\xbd\x2b\xd9\xff\x7d\xe3\x4b\x1b\xf8\x6e\xd8\x67\x79\xb5\x94\xda\xf5\xdb\xce\x62\x14\x17\x07\x6e\x00\x00\x00\x00' 
-    # #b'\x00\x00\x00\x00\x00\x00\x01\xb3\xd7(\xd9?\xe2(\xd4\xf8\xe1\x82a\xfb\xa2D$\x8bW\x82\xecq^\xac\xc6\x95' 
-    # s[58] = 0x04 
-    # s[59:63] = b'\x9E\x5B\x04\x00'
-    # s[63] = 0xB4 
     return s
 
 
 def output_script_p2sh(scripthash: bytes) -> bytearray:
-    print("p2sh")
     # A9 14 <scripthash> 87
-    s = bytearray(62) 
+    s = bytearray(23) 
+    s[0] = 0xA9 # OP_HASH_160 
+    s[1] = 0x14 # pushing 20 bytes 
+    s[2:22] = scripthash 
+    s[22] = 0x87 # OP_EQUAL 
+    return s
+
+def output_script_p2pkh_replay_protection(pubkeyhash: bytes,block_hash: bytes, block_height:bytes) -> bytearray:
+    s = bytearray(63) 
+    print (block_hash)
+    print (block_height)
+    s[0] = 0x76 # OP_DUP 
+    s[1] = 0xA9 # OP_HASH_160 
+    s[2] = 0x14 # pushing 20 bytes 
+    s[3:23] = pubkeyhash 
+    s[23] = 0x88 # OP_EQUALVERIFY 
+    s[24] = 0xAC # OP_CHECKSIG 
+    s[25] = 0x20 
+    s[26:58] = block_hash
+    s[58] = 0x03
+    s[59:62] = block_height[:-1]
+    s[62] = 0xB4
+    return s
+
+
+def output_script_p2sh_replay_protection(scripthash: bytes ,block_hash: bytes, block_height:bytes) -> bytearray:
+    # A9 14 <scripthash> 87
+    s = bytearray(61) 
     s[0] = 0xA9 # OP_HASH_160 
     s[1] = 0x14 # pushing 20 bytes 
     s[2:22] = scripthash 
     s[22] = 0x87 # OP_EQUAL 
     s[23] = 0x20 
-    s[24:56] = b'\x54\x52\xf0\x3c\x7a\xf4\x6d\xf1\x58\xf6\xa6\xfe\x2f\xe9\x49\x49\x66\xed\xc7\x43\x40\x27\xaf\x26\x51\xa3\x88\x0e\x00\x00\x00\x00' 
-    s[56] = 0x04
-    s[57:61]=b'\x9E\x5B\x04\x00'
-    s[61] = 0xB4
+    s[24:56] = block_hash
+    s[56] = 0x03
+    s[57:60]= block_height[:-1]
+    s[60] = 0xB4
     return s
 
 

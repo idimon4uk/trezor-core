@@ -262,9 +262,12 @@ async def sign_tx(tx: SignTx, root: bip32.HDNode):
                             txi_sign.multisig.m)
                     elif txi_sign.script_type == InputScriptType.SPENDADDRESS:
                         print('TXI SIGN: ', txi_sign.prev_input_script)
-
-                        txi_sign.script_sig = output_script_zen(
-                            txi_sign.prev_input_script)
+                        if coin.replay_protection:
+                            txi_sign.script_sig = output_script_zen(
+                                txi_sign.prev_input_script)
+                        else:
+                            txi_sign.script_sig = output_script_p2pkh(
+                                ecdsa_hash_pubkey(key_sign_pub))
                     else:
                         raise SigningError(FailureType.ProcessError,
                                            'Unknown transaction type')
@@ -445,7 +448,6 @@ def get_tx_header(tx: SignTx, segwit: bool = False):
 
 
 def output_derive_script(o: TxOutputType, coin: CoinType, root: bip32.HDNode) -> bytes:
-    print("output derive script")
     if o.script_type == OutputScriptType.PAYTOOPRETURN:
         # op_return output
         if o.amount != 0:
@@ -470,14 +472,18 @@ def output_derive_script(o: TxOutputType, coin: CoinType, root: bip32.HDNode) ->
     raw_address = base58.decode_check(o.address)
 
     if address_type.check(coin.address_type, raw_address):
-        # p2pkh
         pubkeyhash = address_type.strip(coin.address_type, raw_address)
-        return output_script_p2pkh(pubkeyhash)
+        if coin.replay_protection:
+            return output_script_p2pkh_replay_protection(pubkeyhash, o.block_hash, o.block_height)                    ####
+        else :
+            return output_script_p2pkh(pubkeyhash)
 
     elif address_type.check(coin.address_type_p2sh, raw_address):
-        # p2sh
         scripthash = address_type.strip(coin.address_type_p2sh, raw_address)
-        return output_script_p2sh(scripthash)
+        if coin.replay_protection:
+            return output_script_p2sh_replay_protection(scripthash,o.block_hash, o.block_height)
+        else:
+            return output_script_p2sh(scripthash)
 
     raise SigningError(FailureType.DataError, 'Invalid address type')
 
