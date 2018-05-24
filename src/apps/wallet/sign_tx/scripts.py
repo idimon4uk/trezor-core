@@ -18,26 +18,63 @@ def input_script_p2pkh_or_p2sh(pubkey: bytes, signature: bytes, sighash: int) ->
     append_pubkey(w, pubkey)
     return w
 
+def output_script_zen(prev_input_script):
+    # print('LEN: ', len(prev_input_script), len(prev_input_script), prev_input_script)
+    s=bytearray(63)
+    return bytes(prev_input_script)
+
+
 
 def output_script_p2pkh(pubkeyhash: bytes) -> bytearray:
-    s = bytearray(25)
-    s[0] = 0x76  # OP_DUP
-    s[1] = 0xA9  # OP_HASH_160
-    s[2] = 0x14  # pushing 20 bytes
-    s[3:23] = pubkeyhash
-    s[23] = 0x88  # OP_EQUALVERIFY
-    s[24] = 0xAC  # OP_CHECKSIG
+    s = bytearray(25) 
+    s[0] = 0x76 # OP_DUP 
+    s[1] = 0xA9 # OP_HASH_160 
+    s[2] = 0x14 # pushing 20 bytes 
+    s[3:23] = pubkeyhash 
+    s[23] = 0x88 # OP_EQUALVERIFY 
+    s[24] = 0xAC # OP_CHECKSIG 
     return s
 
 
 def output_script_p2sh(scripthash: bytes) -> bytearray:
     # A9 14 <scripthash> 87
+    s = bytearray(23) 
+    s[0] = 0xA9 # OP_HASH_160 
+    s[1] = 0x14 # pushing 20 bytes 
+    s[2:22] = scripthash 
+    s[22] = 0x87 # OP_EQUAL 
+    return s
 
-    s = bytearray(23)
-    s[0] = 0xA9  # OP_HASH_160
-    s[1] = 0x14  # pushing 20 bytes
-    s[2:22] = scripthash
-    s[22] = 0x87  # OP_EQUAL
+def output_script_p2pkh_replay_protection(pubkeyhash: bytes,block_hash: bytes, block_height:bytes) -> bytearray:
+    s = bytearray(63) 
+    print (block_hash)
+    print (block_height)
+    s[0] = 0x76 # OP_DUP 
+    s[1] = 0xA9 # OP_HASH_160 
+    s[2] = 0x14 # pushing 20 bytes 
+    s[3:23] = pubkeyhash 
+    s[23] = 0x88 # OP_EQUALVERIFY 
+    s[24] = 0xAC # OP_CHECKSIG 
+    s[25] = 0x20 
+    s[26:58] = block_hash
+    s[58] = 0x03
+    s[59:62] = block_height[:-1]
+    s[62] = 0xB4
+    return s
+
+
+def output_script_p2sh_replay_protection(scripthash: bytes ,block_hash: bytes, block_height:bytes) -> bytearray:
+    # A9 14 <scripthash> 87
+    s = bytearray(61) 
+    s[0] = 0xA9 # OP_HASH_160 
+    s[1] = 0x14 # pushing 20 bytes 
+    s[2:22] = scripthash 
+    s[22] = 0x87 # OP_EQUAL 
+    s[23] = 0x20 
+    s[24:56] = block_hash
+    s[56] = 0x03
+    s[57:60]= block_height[:-1]
+    s[60] = 0xB4
     return s
 
 
@@ -205,6 +242,7 @@ def output_script_multisig(pubkeys, m: int) -> bytearray:
 
 
 def output_script_paytoopreturn(data: bytes) -> bytearray:
+    print("outout script paytoopreturn")
     w = bytearray_with_cap(1 + 5 + len(data))
     w.append(0x6A)  # OP_RETURN
     write_op_push(w, len(data))

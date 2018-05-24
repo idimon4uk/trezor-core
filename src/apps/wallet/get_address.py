@@ -17,7 +17,6 @@ async def get_address(ctx, msg):
 
     node = await seed.derive_node(ctx, msg.address_n)
     address = addresses.get_address(msg.script_type, coin, node, msg.multisig)
-
     if msg.show_display:
         while True:
             if await _show_address(ctx, address):
