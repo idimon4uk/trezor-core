@@ -4,39 +4,34 @@ import json
 fields = [
     'coin_name',
     'coin_shortcut',
-    'coin_label',
     'address_type',
     'address_type_p2sh',
     'maxfee_kb',
-    'minfee_kb',
     'signed_message_header',
-    'hash_genesis_block',
-    'xprv_magic',
     'xpub_magic',
     'bech32_prefix',
-    'bip44',
+    'cashaddr_prefix',
     'segwit',
-    'forkid',
+    'fork_id',
     'force_bip143',
-    'default_fee_b',
-    'dust_limit',
-    'blocktime_minutes',
-    'firmware',
-    'address_prefix',
-    'min_address_length',
-    'max_address_length',
-    'bitcore',
 ]
 
-coins = json.load(open('../../vendor/trezor-common/coins.json', 'r'))
+support = json.load(open('../../vendor/trezor-common/defs/support.json', 'r'))
+coins = support['trezor2'].keys()
 
 print('COINS = [')
+
 for c in coins:
-    print('    CoinType(')
+    print('    CoinInfo(')
+    name = c.replace(' ', '_').lower()
+    if name == 'testnet':
+        name = 'bitcoin_testnet'
+    data = json.load(open('../../vendor/trezor-common/defs/coins/%s.json' % name, 'r'))
     for n in fields:
-        if n in ['xpub_magic', 'xprv_magic']:
-            print('        %s=0x%s,' % (n, c[n]))
+        if n == 'xpub_magic':
+            print('        %s=0x%08x,' % (n, data[n]))
         else:
-            print('        %s=%s,' % (n, repr(c[n])))
+            print('        %s=%s,' % (n, repr(data[n])))
     print('    ),')
-print(']\n')
+
+print(']')

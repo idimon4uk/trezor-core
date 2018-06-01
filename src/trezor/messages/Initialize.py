@@ -3,15 +3,16 @@ import protobuf as p
 
 
 class Initialize(p.MessageType):
+    MESSAGE_WIRE_TYPE = 0
     FIELDS = {
         1: ('state', p.BytesType, 0),
+        2: ('skip_passphrase', p.BoolType, 0),
     }
-    MESSAGE_WIRE_TYPE = 0
 
     def __init__(
         self,
         state: bytes = None,
-        **kwargs,
-    ):
+        skip_passphrase: bool = None
+    ) -> None:
         self.state = state
-        p.MessageType.__init__(self, **kwargs)
+        self.skip_passphrase = skip_passphrase

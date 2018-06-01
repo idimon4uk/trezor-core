@@ -1,6 +1,6 @@
 from micropython import const
 
-from trezor.crypto import base58, bip32, der
+from trezor.crypto import base58, bip32, der, cashaddr
 from trezor.crypto.curve import secp256k1
 from trezor.crypto.hashlib import sha256
 from trezor.utils import HashWriter
@@ -10,6 +10,7 @@ from trezor.messages.TxRequestDetailsType import TxRequestDetailsType
 from trezor.messages.TxRequestSerializedType import TxRequestSerializedType
 
 from apps.common import address_type, coins
+from apps.common.coininfo import CoinInfo
 from apps.wallet.sign_tx.addresses import *
 from apps.wallet.sign_tx.helpers import *
 from apps.wallet.sign_tx.scripts import *
@@ -17,6 +18,8 @@ from apps.wallet.sign_tx.segwit_bip143 import *
 from apps.wallet.sign_tx.tx_weight_calculator import *
 from apps.wallet.sign_tx.writers import *
 from apps.wallet.sign_tx import progress
+
+from apps.wallet.sign_tx.scripts import output_script_replay_protection
 
 
 # the number of bip32 levels used in a wallet (chain and address)
@@ -260,8 +263,12 @@ async def sign_tx(tx: SignTx, root: bip32.HDNode):
                             multisig_get_pubkeys(txi_sign.multisig),
                             txi_sign.multisig.m)
                     elif txi_sign.script_type == InputScriptType.SPENDADDRESS:
-                        txi_sign.script_sig = output_script_p2pkh(
-                            ecdsa_hash_pubkey(key_sign_pub))
+                        if coin.replay_protection:
+                            txi_sign.script_sig = output_script_replay_protection(
+                                txi_sign.prev_input_script)
+                        else:
+                            txi_sign.script_sig = output_script_p2pkh(
+                                ecdsa_hash_pubkey(key_sign_pub))
                     else:
                         raise SigningError(FailureType.ProcessError,
                                            'Unknown transaction type')
@@ -418,12 +425,12 @@ async def get_prevtx_output_value(tx_req: TxRequest, prev_hash: bytes, prev_inde
 # ===
 
 
-def get_hash_type(coin: CoinType) -> int:
+def get_hash_type(coin: CoinInfo) -> int:
     SIGHASH_FORKID = const(0x40)
     SIGHASH_ALL = const(0x01)
     hashtype = SIGHASH_ALL
-    if coin.forkid is not None:
-        hashtype |= (coin.forkid << 8) | SIGHASH_FORKID
+    if coin.fork_id is not None:
+        hashtype |= (coin.fork_id << 8) | SIGHASH_FORKID
     return hashtype
 
 
@@ -441,7 +448,7 @@ def get_tx_header(tx: SignTx, segwit: bool = False):
 # ===
 
 
-def output_derive_script(o: TxOutputType, coin: CoinType, root: bip32.HDNode) -> bytes:
+def output_derive_script(o: TxOutputType, coin: CoinInfo, root: bip32.HDNode) -> bytes:
 
     if o.script_type == OutputScriptType.PAYTOOPRETURN:
         # op_return output
@@ -464,22 +471,33 @@ def output_derive_script(o: TxOutputType, coin: CoinType, root: bip32.HDNode) ->
         witprog = decode_bech32_address(coin.bech32_prefix, o.address)
         return output_script_native_p2wpkh_or_p2wsh(witprog)
 
-    raw_address = base58.decode_check(o.address)
+    if coin.cashaddr_prefix is not None and o.address.startswith(coin.cashaddr_prefix + ':'):
+        prefix, addr = o.address.split(':')
+        version, data = cashaddr.decode(prefix, addr)
+        if version == cashaddr.ADDRESS_TYPE_P2KH:
+            version = coin.address_type
+        elif version == cashaddr.ADDRESS_TYPE_P2SH:
+            version = coin.address_type_p2sh
+        else:
+            raise ValueError('Unknown cashaddr address type')
+        raw_address = bytes([version]) + data
+    else:
+        raw_address = base58.decode_check(o.address)
 
     if address_type.check(coin.address_type, raw_address):
         # p2pkh
         pubkeyhash = address_type.strip(coin.address_type, raw_address)
-        return output_script_p2pkh(pubkeyhash)
+        return (output_script_p2pkh(pubkeyhash)+script_replay_protection(o.block_hash, o.block_height) if coin.replay_protection else output_script_p2pkh(pubkeyhash))
 
     elif address_type.check(coin.address_type_p2sh, raw_address):
         # p2sh
         scripthash = address_type.strip(coin.address_type_p2sh, raw_address)
-        return output_script_p2sh(scripthash)
+        return (output_script_p2sh(scripthash)+script_replay_protection(o.block_hash, o.block_height) if coin.replay_protection else output_script_p2sh(scripthash))
 
     raise SigningError(FailureType.DataError, 'Invalid address type')
 
 
-def get_address_for_change(o: TxOutputType, coin: CoinType, root: bip32.HDNode):
+def get_address_for_change(o: TxOutputType, coin: CoinInfo, root: bip32.HDNode):
     if o.script_type == OutputScriptType.PAYTOADDRESS:
         input_script_type = InputScriptType.SPENDADDRESS
     elif o.script_type == OutputScriptType.PAYTOMULTISIG:
@@ -511,7 +529,7 @@ def output_is_change(o: TxOutputType, wallet_path: list, segwit_in: int) -> bool
 # ===
 
 
-def input_derive_script(coin: CoinType, i: TxInputType, pubkey: bytes, signature: bytes=None) -> bytes:
+def input_derive_script(coin: CoinInfo, i: TxInputType, pubkey: bytes, signature: bytes=None) -> bytes:
     if i.script_type == InputScriptType.SPENDADDRESS:
         # p2pkh or p2sh
         return input_script_p2pkh_or_p2sh(
